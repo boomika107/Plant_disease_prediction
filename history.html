@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Scan History - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="main-container">
+  <div class="hero">
+    <div class="hero-title">Scan History</div>
+    <p class="hero-subtitle">View all your previous analyses.</p>
+  </div>
+
+  <div class="history-list card" style="padding: var(--space-4); overflow-x: auto;">
+    {% if scans %}
+      <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
+        <thead>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <th style="text-align: left; padding: var(--space-2);">Date</th>
+            <th style="text-align: left; padding: var(--space-2);">Plot</th>
+            <th style="text-align: left; padding: var(--space-2);">Prediction</th>
+            <th style="text-align: left; padding: var(--space-2);">Severity</th>
+            <th style="text-align: right; padding: var(--space-2);">Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for scan in scans %}
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: var(--space-2);">{{ scan.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+              <td style="padding: var(--space-2);">
+                {% if scan.plot %}
+                  {{ scan.plot.name }}
+                {% else %}
+                  --
+                {% endif %}
+              </td>
+              <td style="padding: var(--space-2); font-weight: 700; color: var(--fg);">{{ scan.pred_class }}</td>
+              <td style="padding: var(--space-2);">
+                {% if scan.is_healthy %}
+                  <span class="badge-caption badge-good">Healthy</span>
+                {% else %}
+                  <span class="badge-caption badge-mid">{{ "%.1f"|format(scan.severity) }}%</span>
+                {% endif %}
+              </td>
+              <td style="text-align: right; padding: var(--space-2);">
+                <a href="{{ url_for('scan_detail', scan_id=scan.id) }}" class="submit-button" style="padding: 8px 16px; font-size: 14px;">View</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="info-box">You have no scan history yet.</div>
+      <a href="{{ url_for('scan') }}" class="submit-button" style="margin-top: var(--space-3);">Start your first scan</a>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
