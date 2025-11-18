@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <form class="main-form" method="POST" enctype="multipart/form-data" action="{{ url_for('scan') }}">
+    <div class="main-container">
+      <div class="hero">
+        <div class="hero-title">🌿 Plant Health Diagnostics</div>
+        <p class="hero-subtitle">Upload your plant's leaf to get an instant health report.</p>
+      </div>
+
+      {% if results %}
+      <div class="results-grid">
+        <div class="results-col-1">
+          <div class="uploaded-image-wrapper card">
+            <img src="{{ results.image_data_url }}" alt="Uploaded Image" class="uploaded-image"/>
+          </div>
+        </div>
+
+        <div class="results-col-2">
+          <h1 class="prediction-header">{{ results.emoji }} {{ results.pred_class }}</h1>
+
+          <div class="column-layout">
+            <div class="metric-box card">
+              <h3>🎯 Confidence</h3>
+              <div class="chart-container">{{ results.charts.confidence_gauge | safe }}</div>
+            </div>
+            <div class="metric-box card">
+              {% if results.is_healthy %}
+                <h3>💚 Health Status</h3>
+              {% else %}
+                <h3>⚠️ Severity</h3>
+              {% endif %}
+              <div class="chart-container">{{ results.charts.severity_gauge | safe }}</div>
+              {% if results.is_healthy %}
+                <span class="badge-caption badge-good">Low risk</span>
+              {% else %}
+                {% set sev = results.severity %}
+                {% if sev < 30 %}<span class="badge-caption badge-good">Low severity</span>
+                {% elif sev < 70 %}<span class="badge-caption badge-mid">Moderate</span>
+                {% else %}<span class="badge-caption badge-bad">High</span>
+                {% endif %}
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="tabs">
+            <input type="radio" name="tabs" id="tab1" class="tab-radio" checked/>
+            <label for="tab1" class="tab-label">📖 Definition</label>
+            <div class="tab-content card">
+              {% if results.definition.status == 'success' %}
+                <p class="def-success">{{ results.definition.message }}</p>
+              {% elif results.definition.status == 'info' %}
+                <p class="def-info">{{ results.definition.message }}</p>
+              {% else %}
+                <strong>{{ results.definition.title }}</strong>
+                <p>{{ results.definition.summary | safe }}</p> 
+                {% if results.definition.source %}<p class="caption">Source: {{ results.definition.source }}</p>{% endif %}
+              {% endif %}
+            </div>
+
+            <input type="radio" name="tabs" id="tab2" class="tab-radio"/>
+            <label for="tab2" class="tab-label">💡 Solution & Plan</label>
+            <div class="tab-content card">
+              <h3>Analysis & Recommendations</h3>
+              {% for item in results.solution_guide %}
+                <div class="solution-item">
+                  <strong>🔬 Cause:</strong> <p>{{ item.cause | safe }}</p>
+                  <strong>💊 Solution:</strong> <p>{{ item.remedy | safe }}</p>
+                </div>
+                {% if not loop.last %}<div class="divider"></div>{% endif %}
+              {% endfor %}
+              
+              {% if results.treatment_plan %}
+              <div class="divider"></div>
+              <h3>📋 Treatment Timeline</h3>
+              {% if not from_history %}
+                <p class="def-success" style="font-size: 0.9rem; margin-bottom: var(--space-3);">
+                  This {{ results.treatment_plan|length }}-step plan has been automatically added to your dashboard tasks.
+                </p>
+              {% endif %}
+              <ul class="task-list" style="margin-top:0;">
+                {% for item in results.treatment_plan %}
+                <li>
+                  <input type="checkbox" disabled style="accent-color: var(--muted);">
+                  <div>
+                    <strong>{{ item.task }}</strong>
+                    <small>Due: Day {{ item.day }}</small>
+                  </div>
+                </li>
+                {% endfor %}
+              </ul>
+              {% endif %}
+              <p class="caption">Always follow local agricultural advisories and product labels.</p>
+            </div>
+            
+            <input type="radio" name="tabs" id="tab4" class="tab-radio"/>
+            <label for="tab4" class="tab-label">🌱 Fertilizer</label>
+            <div class="tab-content card">
+              <h3>Fertilizer Recommendations</h3>
+              {% if results.fertilizer and results.fertilizer.description %}
+                <p>{{ results.fertilizer.description | safe }}</p>
+                {% if results.fertilizer.product_name %}
+                  <p><strong>Suggested Product Type:</strong> {{ results.fertilizer.product_name }}</p>
+                  <a href="https://www.google.com/search?q=buy+{{ results.fertilizer.product_name | urlencode }}" class="button-buy-link" target="_blank" rel="noopener noreferrer">
+                    Search to Buy '{{ results.fertilizer.product_name }}'
+                  </a>
+                  <p class="caption" style="margin-top: var(--space-2);">This is a Google search link. Please verify all sellers.</p>
+                {% endif %}
+              {% else %}
+                <p class="def-info">No specific fertilizer recommendation is available.</p>
+              {% endif %}
+            </div>
+
+            <input type="radio" name="tabs" id="tab3" class="tab-radio"/>
+            <label for="tab3" class="tab-label">🔎 Details</label>
+            <div class="tab-content card">
+              <h3>Analysis Details</h3>
+              <div class="metric-box-simple" style="margin-bottom: var(--space-3);">
+                <strong>Plant Type</strong>
+                <div>{{ results.plant_type }}</div>
+              </div>
+              <div class="column-layout">
+                <div class="metric-box-simple">
+                  <strong>Predicted Class</strong>
+                  <div>{{ results.pred_class }}</div>
+                </div>
+                <div class="metric-box-simple">
+                  <strong>Confidence</strong>
+                  <div>{{ "%.1f"|format(results.confidence * 100) }}%</div>
+                </div>
+                <div class="metric-box-simple">
+                  <strong>Severity</strong>
+                  {% if results.is_healthy %}
+                    <div>N/A (Healthy)</div>
+                  {% else %}
+                    <div>{{ "%.1f"|format(results.severity) }}%</div>
+                  {% endif %}
+                </div>
+              </div>
+              <br/>
+              <strong>Top predictions</strong>
+              <div class="chart-container-bar">
+                {{ results.charts.top3_chart | safe }}
+              </div>
+            </div>
+          </div>
+          
+          {% if from_history %}
+            <a href="{{ url_for('history') }}" class="button-new-analysis">Back to History</a>
+          {% else %}
+            <a href="{{ url_for('scan') }}" class="button-new-analysis">Analyze Another Image</a>
+          {% endif %}
+        </div>
+      </div>
+      
+      {% else %}
+        
+        {% if not plots %}
+          <div class="card" style="padding: var(--space-5); text-align: center;">
+            <h2 class="prediction-header" style="font-size: 1.5rem; color: var(--warn);">No Plots Found</h2>
+            <p class="def-info" style="margin-bottom: var(--space-3);">You must create a plot before you can scan an image.</p>
+            <a href="{{ url_for('create_plot') }}" class="submit-button" style="padding: 10px 18px;">+ Create Your First Plot</a>
+          </div>
+        {% else %}
+          <div class="file-uploader card">
+            {% if error %}<p class="error-message">{{ error }}</p>{% endif %}
+            
+            <div style="margin-bottom: var(--space-3); text-align: left;">
+              <label for="plot_id" style="font-weight: 700; display: block; margin-bottom: var(--space-1);">
+                Assign to Plot (Required) </label>
+              <select name="plot_id" id="plot_id" required style="width: 100%; padding: var(--space-2); border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--bg-3); color: var(--fg); font-size: 1rem;">
+                {% for plot in plots %}
+                  <option value="{{ plot.id }}">{{ plot.name }} ({{ plot.crop_type }})</option>
+                {% endfor %}
+              </select>
+            </div>
+            
+            <div class="file-preview-wrapper" id="preview-container">
+                <img src="" alt="Image Preview" id="image-preview" />
+            </div>
+            <div class="file-input-wrapper">
+              <input type="file" name="plant_image" id="plant_image" class="file-input" required accept="image/png, image/jpeg"/>
+              <label for="plant_image" class="file-input-label">Drop a plant leaf image (JPG/PNG)</label>
+            </div>
+            <button type="submit" class="submit-button">Analyze Image</button>
+          </div>
+          {% if not error %}<div class="info-box">Select a plot and upload a leaf photo to begin.</div>{% endif %}
+        {% endif %}
+        {% endif %}
+    </div>
+  </form>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+  (function () {
+    function triggerResize() {
+      if (window.Plotly && document.querySelectorAll('.plotly-graph-div').length) {
+        document.querySelectorAll('.plotly-graph-div').forEach(function (el) {
+          try { window.Plotly.Plots.resize(el); } catch (e) {}
+        });
+      }
+    }
+    window.addEventListener('load', triggerResize);
+    window.addEventListener('resize', triggerResize);
+    document.addEventListener('change', function (e) {
+      if (e.target && e.target.classList.contains('tab-radio')) {
+        setTimeout(triggerResize, 50);
+      }
+    });
+    var fileInput = document.getElementById('plant_image');
+    var fileLabel = document.querySelector('.file-input-label');
+    var previewContainer = document.getElementById('preview-container');
+    var previewImage = document.getElementById('image-preview');
+    if (fileInput && fileLabel && previewContainer && previewImage) {
+      var defaultLabelText = fileLabel.innerHTML;
+      fileInput.addEventListener('change', function(e) {
+        if (e.target.files && e.target.files.length > 0) {
+          var file = e.target.files[0]; var fileName = file.name;
+          fileLabel.innerHTML = '✅ ' + fileName; fileLabel.classList.add('filled');
+          var reader = new FileReader();
+          reader.onload = function(event) {
+            previewImage.src = event.target.result;
+            previewContainer.style.display = 'block';
+          }
+          reader.readAsDataURL(file);
+        } else {
+          fileLabel.innerHTML = defaultLabelText; fileLabel.classList.remove('filled');
+          previewImage.src = ''; previewContainer.style.display = 'none';
+        }
+      });
+    }
+    var analysisForm = document.querySelector('.main-form');
+    var loaderOverlay = document.getElementById('loader-overlay');
+    if (analysisForm && loaderOverlay) {
+      analysisForm.addEventListener('submit', function() {
+        if (fileInput && fileInput.files.length > 0) {
+          loaderOverlay.style.display = 'flex';
+        }
+      });
+    }
+  })();
+</script>
+{% endblock %}
