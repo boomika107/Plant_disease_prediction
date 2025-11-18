@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}{{ plot.name }} - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="main-container">
+  <div class="hero" style="margin-bottom: var(--space-4); text-align: left;">
+    <div class="hero-title">🚜 {{ plot.name }}</div>
+    <p class="hero-subtitle">{{ plot.crop_type }} {% if plot.location %}• {{ plot.location }}{% endif %}</p>
+  </div>
+
+  <div class="card" style="padding: var(--space-4); margin-bottom: var(--space-4);">
+    <h3>Manage Recurring Tasks</h3>
+    <form action="{{ url_for('set_management', plot_id=plot.id) }}" method="POST">
+      <div class="management-form-row">
+        <label for="irrigation_frequency">💧 Irrigate every</label>
+        <input type="number" name="irrigation_frequency" id="irrigation_frequency" min="1" max="90" 
+               value="{{ plot.irrigation_frequency_days or '' }}"
+               placeholder="e.g., 3"
+               class="management-input">
+        <label for="irrigation_frequency">days.</label>
+      </div>
+      <div class="management-form-row">
+        <label for="fertilization_frequency">🌱 Fertilize every</label>
+        <input type="number" name="fertilization_frequency" id="fertilization_frequency" min="1" max="90" 
+               value="{{ plot.fertilization_frequency_days or '' }}"
+               placeholder="e.g., 14"
+               class="management-input">
+        <label for="fertilization_frequency">days with</label>
+        <input type="text" name="preferred_fertilizer" id="preferred_fertilizer"
+               value="{{ plot.preferred_fertilizer or '' }}"
+               placeholder="e.g., 10-10-10 NPK"
+               class="management-input" style="flex-grow: 1;">
+      </div>
+      <div style="text-align: right; margin-top: var(--space-3);">
+        <p class="caption" style="text-align: left; float: left; max-width: 60%;">Leave frequency blank to clear a schedule. Tasks are generated daily on your dashboard.</p>
+        <button type="submit" class="submit-button" style="padding: 10px 18px; font-size: 15px;">Save Schedule</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card" style="padding: var(--space-4); margin-bottom: var(--space-4);">
+    <h3>📓 Plot Journal</h3>
+    <form action="{{ url_for('add_note', plot_id=plot.id) }}" method="POST">
+      <div style="margin-bottom: var(--space-3);">
+        <textarea name="note_content" rows="3" 
+                  placeholder="Log an observation (e.g., 'Planted seeds today', 'Noticed first flowering')..."
+                  style="width: 100%; padding: var(--space-2); border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--bg-3); color: var(--fg); font-size: 1rem;"></textarea>
+      </div>
+      <div style="text-align: right;">
+        <button type="submit" class="submit-button" style="padding: 10px 18px; font-size: 15px;">Save Note</button>
+      </div>
+    </form>
+    
+    <div class="divider"></div>
+    
+    <h3 style="font-size: 1.1rem; color: var(--muted); margin-bottom: 0;">📋 Logged Notes</h3>
+    {% if plot.notes %}
+      <ul class="task-list">
+        {% for note in plot.notes %}
+          <li style="align-items: start; gap: var(--space-3);">
+            <div style="font-size: 0.9rem; color: var(--muted); text-align: right; min-width: 60px;">
+              <strong>{{ note.timestamp.strftime('%b %d') }}</strong><br>
+              <small>{{ note.timestamp.strftime('%Y') }}</small>
+            </div>
+            <div style="padding-top: 4px;">{{ note.content }}</div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="def-info" style="font-size: 0.9rem; margin-top: var(--space-3);">No notes logged for this plot yet.</p>
+    {% endif %}
+  </div>
+  <div class="plot-graph-grid">
+    <div class="card" style="padding: var(--space-4);">
+      <h3>Plot Health Graph</h3>
+      <div class="chart-container" style="height: 300px;">
+        {{ health_chart_html | safe }}
+      </div>
+    </div>
+    <div class="card" style="padding: var(--space-4);">
+      <h3>Event Timeline</h3>
+      <div class="chart-container" style="height: 300px;">
+        {{ event_timeline_html | safe }}
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="padding: var(--space-4); margin-top: var(--space-4); overflow-x: auto;">
+    <h3>Scan History for this Plot</h3>
+    {% if scans %}
+      <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
+        <thead>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <th style="text-align: left; padding: var(--space-2);">Date</th>
+            <th style="text-align: left; padding: var(--space-2);">Prediction</th>
+            <th style="text-align: left; padding: var(--space-2);">Confidence</th>
+            <th style="text-align: left; padding: var(--space-2);">Severity</th>
+            <th style="text-align: right; padding: var(--space-2);">Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for scan in scans %}
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: var(--space-2);">{{ scan.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+              <td style="padding: var(--space-2); font-weight: 700; color: var(--fg);">{{ scan.pred_class }}</td>
+              <td style="padding: var(--space-2);">{{ "%.1f"|format(scan.confidence * 100) }}%</td>
+              <td style="padding: var(--space-2);">
+                {% if scan.is_healthy %}
+                  <span class="badge-caption badge-good">Healthy</span>
+                {% else %}
+                  <span class="badge-caption badge-mid">{{ "%.1f"|format(scan.severity) }}%</span>
+                {% endif %}
+              </td>
+              <td style="text-align: right; padding: var(--space-2);">
+                <a href="{{ url_for('scan_detail', scan_id=scan.id) }}" class="submit-button" style="padding: 8px 16px; font-size: 14px;">View</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="info-box">You have no scans for this plot yet.</div>
+      <a href="{{ url_for('scan') }}" class="submit-button" style="margin-top: var(--space-3);">Add your first scan</a>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    function triggerResize() {
+      if (window.Plotly && document.querySelectorAll('.plotly-graph-div').length) {
+        document.querySelectorAll('.plotly-graph-div').forEach(function (el) {
+          try { window.Plotly.Plots.resize(el); } catch (e) {}
+        });
+      }
+    }
+    window.addEventListener('load', triggerResize);
+    window.addEventListener('resize', triggerResize);
+  })();
+</script>
+{% endblock %}
