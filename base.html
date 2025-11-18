@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Plant Health Diagnostics{% endblock %}</title>
+  
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  
+  <style>
+    .navbar {
+      width: 100%;
+      background: var(--card-strong);
+      border-bottom: 1px solid var(--border);
+      padding: 0 var(--space-4);
+      position: relative;
+      z-index: 100;
+    }
+    .navbar-container {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 70px; /* MOD: Increased from 60px */
+    }
+    .navbar-brand {
+      font-family: 'Poppins', system-ui;
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: var(--brand-2);
+      text-decoration: none;
+    }
+    .navbar-nav {
+      display: flex;
+      gap: var(--space-4); /* MOD: Increased from var(--space-3) */
+      align-items: center;
+    }
+    .navbar-nav a {
+      text-decoration: none;
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 0.9rem;
+      transition: color .2s ease;
+      padding: 8px 0; /* MOD: Added vertical padding */
+    }
+    .navbar-nav a:hover { color: var(--fg); }
+    .navbar-nav .nav-user { color: var(--fg); }
+
+    .flash-messages {
+      position: relative; z-index: 50;
+      max-width: 1280px;
+      margin: var(--space-3) auto calc(var(--space-3) * -1);
+      padding: 0 var(--space-5);
+    }
+    .flash {
+      padding: var(--space-3);
+      border-radius: var(--r-md);
+      font-weight: 700;
+      margin-bottom: var(--space-3);
+    }
+    .flash.danger { background: rgba(255, 122, 106, 0.2); color: var(--danger); }
+    .flash.success { background: rgba(74, 222, 128, 0.15); color: var(--brand); }
+    .flash.warning { background: rgba(242, 201, 76, 0.15); color: var(--warn); }
+    .flash.info { background: rgba(100, 150, 255, 0.15); color: #a0c0ff; }
+
+  </style>
+</head>
+<body>
+
+  <div class="leaf-container">
+    <div class="leaf"></div><div class="leaf"></div><div class="leaf"></div>
+    <div class="leaf"></div><div class="leaf"></div><div class="leaf"></div>
+    <div class="leaf"></div><div class="leaf"></div><div class="leaf"></div>
+    <div class="leaf"></div>
+  </div>
+
+  <nav class="navbar">
+    <div class="navbar-container">
+      <a href="{{ url_for('dashboard') }}" class="navbar-brand">🌿 Plant Health</a>
+      <div class="navbar-nav">
+        {% if current_user.is_authenticated %}
+          <span class="nav-user">Hi, {{ current_user.name }}</span>
+          
+          <a href="{{ url_for('dashboard') }}">Dashboard</a>
+          <a href="{{ url_for('scan') }}">New Scan</a>
+          <a href="{{ url_for('history') }}">History</a>
+          <a href="{{ url_for('analytics') }}">Analytics</a>
+          <a href="{{ url_for('inventory') }}">Inventory</a>
+          <a href="{{ url_for('logout') }}">Logout</a>
+        {% else %}
+          <a href="{{ url_for('login') }}">Login</a>
+          <a href="{{ url_for('register') }}">Register</a>
+        {% endif %}
+      </div>
+    </div>
+  </nav>
+
+  <div class="flash-messages">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+  </div>
+
+  {% block content %}{% endblock %}
+  
+  <div id="loader-overlay">
+    <div class="loader-spinner"></div>
+    <p class="loader-text">Analyzing image...<br/>This may take a moment.</p>
+  </div>
+  
+  {% block scripts %}{% endblock %}
+
+</body>
+</html>
