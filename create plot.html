@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Create New Plot - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="main-container">
+  <div class="file-uploader card" style="max-width: 600px; margin: var(--space-4) auto 0; text-align: left;">
+    <h1 class="prediction-header" style="text-align: center;">Create a New Plot</h1>
+    <p class="hero-subtitle" style="text-align: center; margin-top: -12px; margin-bottom: 24px;">Plots help you organize your scans (e.g., "Backyard Tomatoes").</p>
+    
+    <form method="POST" action="">
+      
+      <div style="margin-bottom: var(--space-3);">
+        <label for="name" style="font-weight: 700; display: block; margin-bottom: var(--space-1);">Plot Name (Required)</label>
+        <input type="text" id="name" name="name" required placeholder="e.g., Backyard Tomatoes"
+               style="width: 100%; padding: var(--space-2); border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--bg-3); color: var(--fg); font-size: 1rem;">
+      </div>
+
+      <div style="margin-bottom: var(--space-3);">
+        <label for="crop_type" style="font-weight: 700; display: block; margin-bottom: var(--space-1);">Main Crop Type (Required)</label>
+        <input type="text" id="crop_type" name="crop_type" required placeholder="e.g., Tomato"
+               style="width: 100%; padding: var(--space-2); border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--bg-3); color: var(--fg); font-size: 1rem;">
+      </div>
+
+      <div style="margin-bottom: var(--space-4);">
+        <label for="location" style="font-weight: 700; display: block; margin-bottom: var(--space-1);">Location (Optional)</label>
+        <input type="text" id="location" name="location" placeholder="e.g., Greenhouse or Field 4"
+               style="width: 100%; padding: var(--space-2); border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--bg-3); color: var(--fg); font-size: 1rem;">
+      </div>
+      
+      <button type="submit" class="submit-button" style="width: 100%;">Create Plot</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
