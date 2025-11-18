@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="main-container">
+  <div class="hero" style="margin-bottom: var(--space-4);">
+    <div class="hero-title">Welcome, {{ current_user.name }}!</div>
+    <p class="hero-subtitle">Your farm's central command center.</p>
+  </div>
+
+  <div class="dashboard-grid">
+
+    <div class="card dashboard-widget">
+      <h3>🌦️ Local Weather</h3>
+      <div id="weather-widget-content">
+        <p class="def-info" style="margin: auto 0;">Requesting location to get weather...</p>
+      </div>
+    </div>
+
+    <div class="card dashboard-widget">
+      <h3>🗺️ Local Outbreak Alert</h3>
+      
+      {% if current_user.latitude %}
+      <div class="outbreak-controls">
+        <label for="radius-selector">Radius:</label>
+        <select id="radius-selector">
+          <option value="0.1">100 m</option>
+          <option value="1">1 km</option>
+          <option value="10" selected>10 km</option>
+        </select>
+      </div>
+      <div id="outbreak-list-content">
+        {% if outbreaks %}
+          <ul class="outbreak-list">
+          {% for item in outbreaks %}
+            <li><strong>{{ item.count }}</strong> cases of <strong>{{ item.disease }}</strong> reported.</li>
+          {% endfor %}
+          </ul>
+        {% else %}
+          <div class="badge-caption badge-good" style="margin: 0;">No outbreaks reported in this radius.</div>
+        {% endif %}
+      </div>
+      {% else %}
+      <div id="outbreak-location-prompt">
+        <p class="def-info">Please set your farm's location to see local outbreak alerts.</p>
+        <button class="button-buy-link" id="set-location-btn">Set Farm Location</button>
+        <p id="location-status" style="font-size: 0.9rem; color: var(--muted); margin-top: 12px;"></p>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="card dashboard-widget">
+      
+      <details class="collapsible-widget">
+        <summary class="collapsible-summary">
+          <div class="summary-title">
+            <h3>✅ Today's Checklist</h3>
+            <span class="collapsible-summary-count">
+              {% if tasks_today %}{{ tasks_today|length }} task(s) left{% else %}All done!{% endif %}
+            </span>
+          </div>
+          <div class="collapsible-indicator"></div>
+        </summary>
+        <div class="collapsible-content">
+          {% if tasks_today %}
+            <ul class="task-list">
+            {% for task in tasks_today %}
+              <li>
+                <form method="POST" action="{{ url_for('toggle_task', task_id=task.id) }}">
+                  <input type="checkbox" onchange="this.form.submit()">
+                </form>
+                <div>
+                  <strong>{{ task.title }}</strong>
+                  <small>Due: Today
+                    {% if task.plot %}
+                      (for {{ task.plot.name }})
+                    {% endif %}
+                  </small>
+                </div>
+              </li>
+            {% endfor %}
+            </ul>
+          {% else %}
+            <p class="def-info" style="font-size: 0.9rem; margin-top: var(--space-3);">No tasks due today. All done!</p>
+          {% endif %}
+        </div>
+      </details>
+      
+      <div class="divider" style="margin: var(--space-3) 0;"></div>
+
+      <details class="collapsible-widget">
+        <summary class="collapsible-summary">
+          <div class="summary-title">
+            <h3 style="font-size: 1.1rem; color: var(--muted);">🗓️ Upcoming Tasks</h3>
+            <span class="collapsible-summary-count">
+              {{ tasks_upcoming|length }} task(s) upcoming
+            </span>
+          </div>
+          <div class="collapsible-indicator"></div>
+        </summary>
+        <div class="collapsible-content">
+          {% if tasks_upcoming %}
+            <ul class="task-list">
+            {% for task in tasks_upcoming %}
+              <li>
+                <input type="checkbox" disabled>
+                <div>
+                  <strong>{{ task.title }}</strong>
+                  <small>Due: {{ task.due_date.strftime('%b %d') }}
+                    {% if task.plot %}
+                      (for {{ task.plot.name }})
+                    {% endif %}
+                  </small>
+                </div>
+              </li>
+            {% endfor %}
+            </ul>
+          {% else %}
+            <p class="def-info" style="font-size: 0.9rem; margin-top: var(--space-3);">No upcoming tasks.</p>
+          {% endif %}
+        </div>
+      </details>
+
+    </div>
+    <div class="card dashboard-widget">
+      <h3>🚜 My Farm Plots</h3>
+      {% if plots %}
+        <ul class="plot-list">
+        {% for plot in plots %}
+          <li>
+            <a href="{{ url_for('plot_detail', plot_id=plot.id) }}">
+              <strong>{{ plot.name }}</strong>
+              <small>{{ plot.crop_type }} {% if plot.location %}({{ plot.location }}){% endif %}</small>
+            </a>
+          </li>
+        {% endfor %}
+        </ul>
+      {% else %}
+        <p class="def-info" style="font-size: 0.9rem;">You haven't created any plots yet.</p>
+      {% endif %}
+      <a href="{{ url_for('create_plot') }}" class="button-buy-link" style="margin-top: var(--space-3);">+ Create New Plot</a>
+    </div>
+
+  </div> </div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const weatherWidget = document.getElementById('weather-widget-content');
+    function getWeatherData() {
+      if (!navigator.geolocation) {
+        weatherWidget.innerHTML = '<p class="def-info">Geolocation is not supported by your browser.</p>';
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude; const lon = position.coords.longitude;
+          fetchWeather(lat, lon);
+        },
+        (error) => {
+          let errorMsg = 'Could not get your location.';
+          if (error.code === error.PERMISSION_DENIED) errorMsg = 'Please allow location access to see local weather.';
+          weatherWidget.innerHTML = `<p class="badge-caption badge-mid">${errorMsg}</p>`;
+        }
+      );
+    }
+    async function fetchWeather(lat, lon) {
+      try {
+        const response = await fetch(`/get_weather?lat=${lat}&lon=${lon}`);
+        if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.error || 'Failed to fetch weather'); }
+        const data = await response.json();
+        renderWeather(data);
+      } catch (error) {
+        console.error('Error fetching weather:', error);
+        weatherWidget.innerHTML = `<p class="badge-caption badge-bad">${error.message}</p>`;
+      }
+    }
+    function renderWeather(data) {
+      let html = ''; const today = data.today;
+      html += `<div class="weather-today"><img src="https://openweathermap.org/img/wn/${today.icon}@2x.png" alt="${today.description}"><div class="weather-today-info"><strong>Today: ${Math.round(today.temp)}°C</strong><span>${today.description}</span><small>H: ${Math.round(today.max_temp)}° L: ${Math.round(today.min_temp)}°</small></div></div>`;
+      html += '<div class="weather-forecast">';
+      for (const day of data.forecast) {
+        const date = new Date(day.dt); const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+        html += `<div class="forecast-day"><strong>${dayName}</strong><img src="https://openweathermap.org/img/wn/${day.icon}.png" alt="weather icon"><span>${Math.round(day.max_temp)}° / ${Math.round(day.min_temp)}°</span></div>`;
+      }
+      html += '</div>';
+      weatherWidget.innerHTML = html;
+    }
+    getWeatherData();
+
+    const setLocationBtn = document.getElementById('set-location-btn');
+    const locationStatus = document.getElementById('location-status');
+    const radiusSelector = document.getElementById('radius-selector');
+    const outbreakListContent = document.getElementById('outbreak-list-content');
+    if (setLocationBtn) {
+      setLocationBtn.addEventListener('click', () => {
+        if (!navigator.geolocation) { locationStatus.textContent = 'Geolocation is not supported.'; return; }
+        locationStatus.textContent = 'Getting your location...';
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const lat = position.coords.latitude; const lon = position.coords.longitude;
+            locationStatus.textContent = 'Saving location...';
+            try {
+              const response = await fetch('/set_location', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lat: lat, lon: lon })
+              });
+              const data = await response.json();
+              if (response.ok) { locationStatus.textContent = 'Location saved! Reloading...'; location.reload(); }
+              else { throw new Error(data.error || 'Failed to save'); }
+            } catch (err) { locationStatus.textContent = `Error: ${err.message}`; }
+          },
+          (error) => { locationStatus.textContent = 'Error: Could not get location.'; }
+        );
+      });
+    }
+    if (radiusSelector) {
+      radiusSelector.addEventListener('change', async () => {
+        const radius = radiusSelector.value;
+        outbreakListContent.innerHTML = '<p class="def-info">Checking for outbreaks...</p>';
+        try {
+          const response = await fetch(`/update_outbreaks?radius=${radius}`);
+          const data = await response.json();
+          if (!response.ok) { throw new Error(data.error || 'Failed to fetch'); }
+          if (data.length === 0) {
+            outbreakListContent.innerHTML = '<div class="badge-caption badge-good" style="margin: 0;">No outbreaks reported in this radius.</div>';
+            return;
+          }
+          let listHtml = '<ul class="outbreak-list">';
+          for (const item of data) { listHtml += `<li><strong>${item.count}</strong> cases of <strong>'${item.disease}'</strong> reported.</li>`; }
+          listHtml += '</ul>';
+          outbreakListContent.innerHTML = listHtml;
+        } catch (err) { outbreakListContent.innerHTML = `<p class="badge-caption badge-bad">Error: ${err.message}</p>`; }
+      });
+    }
+  });
+</script>
+{% endblock %}
