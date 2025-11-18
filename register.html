@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Register - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="main-container">
+  <div class="file-uploader card" style="max-width: 500px; margin: var(--space-4) auto 0; text-align: left;">
+    <h1 class="prediction-header" style="text-align: center;">Create Account</h1>
+    
+    <form method="POST" action="">
+      
+      <div style="margin-bottom: var(--space-3);">
+        <label for="name" style="font-weight: 700; display: block; margin-bottom: var(--space-1);">Full Name</label>
+        <input type="text" id="name" name="name" required 
+               style="width: 100%; padding: var(--space-2); border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--bg-3); color: var(--fg); font-size: 1rem;">
+      </div>
+
+      <div style="margin-bottom: var(--space-3);">
+        <label for="username" style="font-weight: 700; display: block; margin-bottom: var(--space-1);">Username</label>
+        <input type="text" id="username" name="username" required 
+               style="width: 100%; padding: var(--space-2); border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--bg-3); color: var(--fg); font-size: 1rem;">
+      </div>
+
+      <div style="margin-bottom: var(--space-4);">
+        <label for="password" style="font-weight: 700; display: block; margin-bottom: var(--space-1);">Password</label>
+        <input type="password" id="password" name="password" required
+               style="width: 100%; padding: var(--space-2); border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--bg-3); color: var(--fg); font-size: 1rem;">
+      </div>
+      
+      <button type="submit" class="submit-button" style="width: 100%;">Register</button>
+    </form>
+    <div class="divider"></div>
+    <p style="text-align: center; color: var(--muted);">
+      Already have an account? <a href="{{ url_for('login') }}" style="color: var(--brand-2); font-weight: 700;">Log In</a>
+    </p>
+  </div>
+</div>
+{% endblock %}
